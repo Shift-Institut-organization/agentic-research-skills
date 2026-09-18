@@ -1,0 +1,22 @@
+# Working & internal project data directories
+Projekte/
+data/
+scratch/
+
+# Python & environment artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# Operating system & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Local environment & logs
+*.log
+.env
