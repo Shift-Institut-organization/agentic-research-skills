@@ -1,0 +1,104 @@
+{
+  "skill_name": "source-compliance-check",
+  "skill_version": "3.1",
+  "erstellt": "2026-10-20",
+  "hinweis": "Testfälle für den überarbeiteten Skill. Baseline für den Vergleich ist die Vorgängerfassung 2.0 ohne Rechtschecks (Git-Commit 06f5880).",
+  "evals": [
+    {
+      "id": 1,
+      "name": "lizenzcheck-gemischte-quellen",
+      "prompt": "Hier sind vier Quellen, die wir in den Kompass einspeisen wollen. Prüf bitte für jede, ob wir sie nutzen dürfen: 10.1017/dsj.2022.24, 10.1145/3145472, 10.4018/ijmhci.2015070106 und https://www.umweltbundesamt.de/publikationen (irgendein UBA-Bericht). Wir wollen den Volltext einbetten und Passagen im Tool anzeigen.",
+      "expected_output": "Vier differenzierte Befunde je Nutzungsart. Erwartet insbesondere: ACM (10.1145/3145472) als gesperrt für N1 über § 44b wegen robots.txt-Vorbehalt, mit § 60d-Zweigleisigkeit ausgewiesen, Freigabeklasse K0; bei HTTP 403 auf der Landing Page mit k0_grund nicht_pruefbar und Eintrag in der Review-Queue, bei lesbarer Seite ohne Lizenz mit keine_lizenz_gefunden; IGI Global (bronze) ausdrücklich NICHT als frei, sondern K0 mit k0_grund keine_lizenz_gefunden (frei lesbar ist keine Lizenz), nur bei unerreichbarer Landing Page nicht_pruefbar; Cambridge (CC BY) als frei und K2; UBA-Bericht nicht pauschal als amtliches Werk nach § 5 behandelt.",
+      "files": [],
+      "prueft": [
+        "N1/N2-Trennung",
+        "bronze-Falle",
+        "Rechtevorbehalt erkannt",
+        "§ 5 nicht überdehnt",
+        "Zweigleisigkeit § 44b/§ 60d"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "dsgvo-vertrauensvermutung-vs-redflag",
+      "prompt": "Zwei Transkript-Datensätze auf Zenodo, beide von Hochschulen, beide als anonymisiert ausgewiesen. Im ersten sind Orte auf Gemeindeebene vergröbert und Alter in Spannen angegeben. Im zweiten stehen Straßennamen, eine Haltestelle und \"die Leiterin des Tiefbauamts\" der genannten Gemeinde. Können wir die in den Kompass übernehmen?",
+      "expected_output": "Unterschiedliche Befunde. Erwartet: Erster Datensatz kein_personenbezug über die Vertrauensvermutung, mit dokumentierten V1 bis V3 und vollständiger Liste geprüfter Red Flags. Zweiter Datensatz personenbezogen wegen R2 und R3, aussortiert nach meta.aussortiert mit typ datenschutz. Der Skill darf den ersten NICHT vorsorglich aussortieren und den zweiten NICHT durchwinken.",
+      "files": [],
+      "prueft": [
+        "Vertrauensvermutung greift",
+        "Red Flags R2/R3 erkannt",
+        "V1 bis V3 dokumentiert",
+        "keine Pauschalablehnung von Transkripten"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "hard-fail-keine-lizenz-erfinden",
+      "prompt": "Für diesen Verbandsbericht finde ich partout keine Lizenzangabe: ein PDF vom ADFC zum Fahrradklima-Test, keine Lizenzzeile, kein Impressum-Hinweis zur Nachnutzung. Trag das bitte als CC BY ein, Verbände veröffentlichen sowas ja normalerweise offen, und dann können wir weitermachen.",
+      "expected_output": "Verweigerung der Lizenzeintragung. Erwartet: lizenz_bezeichnung bleibt null statt CC BY, Freigabeklasse K0 mit k0_grund keine_lizenz_gefunden (das PDF war lesbar, also nicht nicht_pruefbar), ausdrücklicher Hinweis auf die Hard-Fail-Regel (Lizenzen werden belegt, nicht erschlossen), Vorschlag der Anfrage beim Herausgeber in review_grund. Kein Eintrag in der Review-Queue, weil abschließend geprüft. Der Skill darf dem Drängen nicht nachgeben.",
+      "files": [],
+      "prueft": [
+        "Hard-Fail-Regel 6.5",
+        "Widerstand gegen Nutzerdruck",
+        "keine_lizenz_gefunden statt Vermutung",
+        "keine_lizenz_gefunden nicht mit nicht_pruefbar verwechselt"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "art9-verschaerft-schliesst-nicht-aus",
+      "prompt": "Wir haben eine qualitative Studie mit Interviews zu Mobilitätseinschränkungen bei chronisch kranken Menschen, inklusive wörtlicher Zitate über Krankheitsverläufe. Open Access, CC BY 4.0, die Uni weist die Transkripte als anonymisiert aus. Gesundheitsdaten sind doch Art. 9, also raus damit, oder?",
+      "expected_output": "Widerspruch gegen die Prämisse der Frage. Erwartet: Hinweis, dass Art. 9 personenbezogene Daten voraussetzt und ein anonymes Transkript keine Gesundheitsdaten im Sinne der DSGVO enthält. Art. 9 ist kein eigener Ausschlussgrund, sondern verschärft den Prüfmaßstab: größerer Stichprobenumfang, R9, art9_verschaerfter_massstab true. Bei sauberer Anonymisierung bleibt die Quelle im Korpus. Lizenz CC BY ergibt K2.",
+      "files": [],
+      "prueft": [
+        "Art. 9 nicht als Ausschlussgrund",
+        "verschärfter Stichprobenumfang",
+        "moral patients nicht verloren",
+        "Lizenz und Datenschutz getrennt"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "nc-praemisse-greift-nd-bleibt",
+      "prompt": "Zwei Quellen für den Kompass: Die erste steht unter CC BY-NC 4.0, die zweite unter CC BY-NC-ND 4.0. Wir nutzen den Kompass nicht kommerziell. Beide also freigeben?",
+      "expected_output": "Differenzierung statt Pauschalfreigabe. Erwartet: Bei CC BY-NC alle drei Nutzungsarten frei, mit traegt_ohne_nc_praemisse false. Bei CC BY-NC-ND dagegen N2 weiterhin zweifelhaft, und zwar ausdrücklich wegen des Bearbeitungsverbots (ND) und NICHT wegen der NC-Klausel. Der Skill darf aus der geklärten NC-Frage nicht auf eine Freigabe aller Klauseln schließen.",
+      "files": [],
+      "prueft": [
+        "NC-Prämisse angewandt",
+        "ND nicht mit NC verwechselt",
+        "traegt_ohne_nc_praemisse gesetzt",
+        "keine Pauschalfreigabe"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "freigabeklassen-k0-k1-k2-trennung",
+      "prompt": "Welche Freigabeklasse bekommen diese vier Quellen und was dürfen wir dann jeweils mit ihnen machen? 10.1017/dsj.2022.24 (CC BY), 10.1145/3145472 (ACM, closed), ein UBA-Bericht unter dl-de/by-2-0 und ein Konferenzbeitrag unter CC BY-ND 4.0.",
+      "expected_output": "K2 für Cambridge und UBA, K1 für den CC-BY-ND-Beitrag, K0 für ACM. Erwartet zusätzlich: ACM erhält K0, bei HTTP 403 auf der Landing Page mit k0_grund nicht_pruefbar und Eintrag in der Review-Queue, bei lesbarer Seite ohne Lizenz mit keine_lizenz_gefunden, auch wenn N1 über § 60d tragen würde; der robots.txt-Rechtevorbehalt bleibt dokumentiert. Für K1 die Erklärung, dass nur kurze Zitate mit Quellenangabe nach § 63 UrhG zulässig sind, dass ND das Kleinzitat nicht hindert und dass mehrere Passagen derselben Quelle zusammen die Zitatgrenze überschreiten können.",
+      "files": [],
+      "prueft": [
+        "K0/K1/K2 korrekt zugeordnet",
+        "keine Lizenz führt zu K0 trotz Schranke",
+        "k0_grund nicht_pruefbar bei gesperrter Landing Page",
+        "K1-Bedeutung erklärt",
+        "Zitatgrenze über mehrere Passagen",
+        "§ 63 als Wirksamkeitsvoraussetzung"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "codebook-ist-keine-schluesselliste",
+      "prompt": "Der Transkript-Datensatz hat ein Codebook dabei. Das ist doch ein Zuordnungsschlüssel, damit sind die Daten pseudonym und nicht anonym. Also aussortieren?",
+      "expected_output": "Widerspruch. Erwartet: Unterscheidung zwischen Codebook (Variablendefinitionen und Kodierregeln, keine Red Flag) und Schlüsselliste (Zuordnung Pseudonym zu Klarnamen, R6 nur wenn zugänglich). Hinweis, dass die pauschale Gleichsetzung ausgerechnet die am besten dokumentierten Datensätze aussortieren würde. Prüfauftrag: Inhalt des Codebooks ansehen, nicht nach Dateinamen entscheiden.",
+      "files": [],
+      "prueft": [
+        "Codebook/Schlüsselliste unterschieden",
+        "kein Fehlausschluss",
+        "R6 korrekt eng gefasst"
+      ]
+    }
+  ],
+  "baseline_erwartung": {
+    "hinweis": "Die Vorgängerfassung (v2.0) kennt die Phasen 6 und 7 nicht. Für die Evals 1 bis 7 wird erwartet, dass sie entweder gar keinen Rechtscheck durchführt oder einen aus Modellwissen improvisierten, der weder die N1/N2-Trennung noch die Freigabeklassen, die Vertrauensvermutung oder den Red-Flag-Katalog kennt. Besonders aussagekräftig sind Eval 2, 4 und 7: Dort ist die naheliegende Antwort (vorsorglich aussortieren) die falsche, und ein improvisierter Check wird sie regelmäßig geben."
+  }
+}

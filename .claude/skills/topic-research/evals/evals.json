@@ -1,0 +1,24 @@
+{
+  "skill_name": "topic-research",
+  "skill_version": "3.1",
+  "erstellt": "2026-10-20",
+  "hinweis": "Testfälle für den überarbeiteten Skill. Baseline für den Vergleich ist die Vorgängerfassung 2.0 ohne Rechtschecks (Git-Commit 06f5880).",
+  "evals": [
+    {
+      "id": 0,
+      "name": "vollstaendiger-lauf-oepnv",
+      "prompt": "Wir nehmen als nächstes Thema ÖPNV für den Kompass. Bitte erstell mir das Suchprotokoll und sammle die Quellen. Schwerpunkt soll auf Akzeptanz und Nutzungsbarrieren bei Menschen liegen, die den ÖPNV gerade NICHT nutzen, also die indirekt Betroffenen. Qualitative Interviews sind uns besonders wichtig.",
+      "expected_output": "suchprotokoll_oepnv.md und findings_oepnv.json. Erwartet: Archetyp 2 erkannt, Facette C auf Nicht-Nutzende erweitert, Phase 3B ausgeführt, beide Rechtschecks je Quelle mit N1/N2/N3-Befunden, Review-Queue befüllt, validate_findings.py läuft fehlerfrei.",
+      "files": [],
+      "prueft": [
+        "Gesamtpipeline",
+        "Entbikung (kein Radverkehrs-Bias)",
+        "Facette C indirekt Betroffene",
+        "beide Checks integriert"
+      ]
+    }
+  ],
+  "baseline_erwartung": {
+    "hinweis": "Die Vorgängerfassung (v2.0) sollte Eval 0 grundsätzlich bearbeiten können, aber mit Radverkehrs-Bias aus den Beispielen. Erwartet wird zusätzlich, dass topic-research am Ende source-compliance-check in einem frischen Subagenten startet."
+  }
+}

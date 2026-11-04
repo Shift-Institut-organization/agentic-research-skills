@@ -1,9 +1,11 @@
 ---
-name: stakeholder_analyse
+name: stakeholder-analyse
 description: >
-  Leitet aus einer findings.json-Datei (produziert vom suchprotokoll_recherche-Skill)
-  alle relevanten Stakeholder eines Themas ab. Kategorisiert, priorisiert und
-  erstellt eine vollständige Stakeholder-Map mit Interessenkonflikten und
+  Leitet aus einer geprüften findings_<thema>.json (topic-research, dann
+  source-compliance-check) alle relevanten Stakeholder eines Themas ab. Nutzt nur Quellen,
+  die nach der Rechteprüfung genutzt werden dürfen: keine Quellen mit Freigabeklasse K0,
+  keine mit personenbezogenen oder nicht prüfbaren Daten, keine aussortierten. Kategorisiert,
+  priorisiert und erstellt eine Stakeholder-Map mit Interessenkonflikten und
   Engagement-Empfehlungen. Trigger-Phrasen: "Stakeholder ableiten",
   "Stakeholder-Analyse", "Stakeholder-Map erstellen", "Wer sind die Stakeholder",
   "stakeholder mapping", "Interessengruppen analysieren".
@@ -12,30 +14,64 @@ description: >
 # Skill: Stakeholder-Analyse aus Forschungsdaten
 
 ## Ziel
-Aus einer **`findings_<thema>.json`** (erstellt vom `suchprotokoll_recherche`-Skill)
-alle identifizierbaren Stakeholder systematisch ableiten, kategorisieren und als
-priorisierte Stakeholder-Map ausgeben.
+Aus einer geprüften **`findings_<thema>.json`** alle identifizierbaren Stakeholder
+systematisch ableiten, kategorisieren und als priorisierte Stakeholder-Map ausgeben.
 
 ---
 
 ## Voraussetzung: Input-Datei
 
-Vor dem Start prüfen ob eine `findings_*.json` im Arbeitsverzeichnis existiert.
-Falls nicht: Benutzer darauf hinweisen, zuerst den `suchprotokoll_recherche`-Skill
-auszuführen.
+1. Prüfen, ob eine `findings_*.json` im Arbeitsverzeichnis existiert. Falls nicht: zuerst den
+   Skill `topic-research` ausführen.
+2. Prüfen, ob die Rechteprüfung abgeschlossen ist: `meta.lizenz_geprueft` und
+   `meta.dsgvo_geprueft` gesetzt. Falls nicht: zuerst `source-compliance-check` ausführen.
+   **Ohne Rechteprüfung keine Analyse**, auch nicht vorläufig.
 
-**Lies die Datei vollständig** mit dem `view_file`-Tool.
-Vollständige Feldbeschreibung des Schemas: `references/findings_schema.md`
+**Lies die Datei vollständig** mit dem Read-Werkzeug. Schema:
+`../topic-research/references/findings-schema.md` (einzige maßgebliche Schemabeschreibung).
+
+---
+
+## Nutzungsregel: Welche Quellen in die Analyse eingehen
+
+Lizenz und Datenschutz sind zwei getrennte Urteile. In die Analyse geht eine Quelle nur ein,
+wenn beide sie zulassen (`findings-schema.md`, Abschnitt 3.4):
+
+| `lizenz.freigabeklasse` | `datenschutz.befund` | In der Analyse |
+|---|---|---|
+| `K1` oder `K2` | `kein_personenbezug` | ja |
+| `K1` oder `K2` | `zweifelhaft` oder `ausstehend` | nein, bis das Review entschieden hat oder die Prüfung nachgeholt ist |
+| `K1` oder `K2` | `personenbezogen` oder `nicht_pruefbar` | nein |
+| `K0`, fehlend oder unbekannt | beliebig | nein |
+| Quelle steht in `meta.aussortiert` | beliebig | nein |
+
+Ausgeschlossene Quellen werden **gar nicht** ausgewertet, auch nicht ihre Metadaten,
+Zielgruppen oder Institutionen. Sie erscheinen nur gezählt im Lagebild und mit ID in der
+Liste der ausgeschlossenen Quellen, damit sichtbar bleibt, was fehlt.
+
+Zusätzlich gilt für die Arbeit mit Inhalten:
+- **Keine identifizierbaren Personen.** Stakeholder sind Gruppen und Organisationen, nie
+  einzelne Befragte. Rollen, die eine einzelne Person erkennbar machen („die Leiterin des
+  Tiefbauamts in X"), werden auf die Gruppe verallgemeinert („kommunale Verkehrsplanung").
+- **Selbstauskünfte von Autorinnen und Autoren** (`datenschutz.autor_selbstauskunft`, etwa ein
+  Positionality-Absatz) werden nicht ausgewertet.
+- **Zitate aus `K1`-Quellen** nur kurz, als Beleg und mit Quellenangabe (§§ 51, 63 UrhG). Sonst
+  in eigenen Worten wiedergeben.
 
 ---
 
 ## Workflow
 
-### Phase 0: Datei einlesen & Lagebild erstellen
+### Phase 0: Datei einlesen, filtern & Lagebild erstellen
 
-1. findings.json öffnen und alle Einträge lesen
-2. Erstelle ein kurzes **Lagebild**:
-   - Anzahl Quellen gesamt
+1. findings-Datei öffnen und alle Einträge lesen
+2. Die Nutzungsregel auf jeden Eintrag anwenden und die nutzbaren Quellen bestimmen. Für eine
+   große Datei die Regel per Skript anwenden statt von Hand:
+   ```bash
+   python -c "import json,sys; sys.path.insert(0,'.claude/skills/daten-download/scripts'); from nutzungsregel import *; d=json.load(open('findings_<thema>.json',encoding='utf-8')); a=aussortiert_schluessel(d['meta']); [print(f['id'], *nutzungsstatus(f, quelle_schluessel(f), a)) for f in d['findings']]"
+   ```
+3. Erstelle ein kurzes **Lagebild**:
+   - Anzahl Quellen gesamt, davon genutzt, gesperrt und wartend auf Review
    - Verteilung nach `quelle_typ` (journal, dataset, report, …)
    - Häufigste `methodik`-Typen
    - Häufigste `laender_regionen`
@@ -45,7 +81,7 @@ Vollständige Feldbeschreibung des Schemas: `references/findings_schema.md`
 
 ### Phase 1: Rohe Stakeholder-Extraktion
 
-Gehe **jeden Eintrag** in `findings` durch und extrahiere:
+Gehe **jeden genutzten Eintrag** in `findings` durch und extrahiere:
 
 | findings-Feld | Was es liefert |
 |---------------|---------------|
@@ -159,6 +195,8 @@ Identifiziere:
 
 ## 0. Lagebild der Datenbasis
    [Übersicht über Quellen, Methoden, Geographien]
+   [Genutzt / gesperrt / wartend auf Review, mit den IDs der nicht genutzten Quellen
+    und dem Hinweis, dass sie nach der Nutzungsregel ausgeschlossen sind]
 
 ## 1. Rohe Stakeholder-Extraktion
    [Tabelle: Quelle → Stakeholder → Kontext]
@@ -189,13 +227,19 @@ Identifiziere:
     "thema": "string",
     "findings_basis": "findings_<thema>.json",
     "quellen_count": 0,
+    "quellen_genutzt": 0,
+    "quellen_ausgeschlossen": {
+      "gesperrt": ["F-003"],
+      "warten_auf_review": ["F-011"]
+    },
+    "nutzungsregel": "findings-schema.md, Abschnitt 3.4",
     "erstellungsdatum": "ISO-8601"
   },
   "stakeholder": [
     {
       "id": "SH-001",
       "name": "string",
-      "kategorie": "primaer | sekundaer" | "tertiaer",
+      "kategorie": "primaer | sekundaer | tertiaer",
       "macht": "hoch | mittel | niedrig",
       "interesse": "hoch | mittel | niedrig",
       "prioritaet": "schluessel | halten_informieren | beobachten | informieren",
@@ -219,7 +263,13 @@ Identifiziere:
 
 ## Qualitätssicherung (Checkliste)
 
-- [ ] Alle findings.json-Einträge wurden gelesen
+- [ ] Rechteprüfung war abgeschlossen (`meta.lizenz_geprueft`, `meta.dsgvo_geprueft`)
+- [ ] Nutzungsregel angewandt: keine Quelle mit `K0`, `personenbezogen`, `nicht_pruefbar`,
+      `zweifelhaft`, `ausstehend` oder aus `meta.aussortiert` ausgewertet
+- [ ] `belege_finding_ids` enthalten nur genutzte Quellen
+- [ ] Keine einzelne Person identifizierbar, nur Gruppen und Organisationen
+- [ ] Ausgeschlossene Quellen in Lagebild und `meta.quellen_ausgeschlossen` aufgeführt
+- [ ] Alle genutzten Einträge wurden gelesen
 - [ ] Rohe Extraktion deckt alle 4 relevanten Felder ab
 - [ ] Konsolidierung: keine semantischen Duplikate mehr
 - [ ] Mindestens 8 verschiedene Stakeholder-Typen identifiziert
@@ -232,5 +282,7 @@ Identifiziere:
 
 ## Referenzen
 
-- findings.json Schema: `references/findings_schema.md`
-- Stakeholder-Framework: `references/stakeholder_framework.md`
+- Schema und Nutzungsregel: `../topic-research/references/findings-schema.md` (Abschnitt 3.4)
+- Nutzungsregel als Code: `../daten-download/scripts/nutzungsregel.py`
+- Die Ergebnisdateien `stakeholder_<thema>.md` und `stakeholder_<thema>.json` sind der Input
+  für den Skill `requirements-analyse`.

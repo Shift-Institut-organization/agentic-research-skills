@@ -1,0 +1,801 @@
+{
+  "meta": {
+    "thema": "Beispiel (Radverkehr, auf 4 Eintraege gekuerzt zur Demonstration)",
+    "erstellungsdatum": "2026-10-20",
+    "suchprotokoll_version": "3.1",
+    "quellen_count": 4,
+    "nutzungsarten": {
+      "N1": "Volltext in RAG- oder Vektordatenbank einbetten",
+      "N2": "Passagen oder Volltext an Nutzende ausliefern",
+      "N3": "Datenanhaenge weiterverwenden"
+    },
+    "projektpraemissen": {
+      "rechtstraeger_status": "Forschungsorganisation i.S.d. § 60d UrhG",
+      "nutzung_kommerziell": false,
+      "quelle_der_einordnung": "Angabe des Projekts, 2026-10-20",
+      "juristisch_geprueft": false
+    },
+    "lizenz_geprueft": "2026-10-20",
+    "dsgvo_geprueft": "2026-10-20",
+    "recherche_diagnose": {
+      "treffer_roh_gesichtet": 184,
+      "gefiltert_irrelevant": 139,
+      "validiert_gespeichert": 4,
+      "aussortiert_lizenz": 1,
+      "review_queue_count": 0,
+      "saettigungsgrund": "Demonstrationsdatei, auf 4 Eintraege gekuerzt"
+    },
+    "phasen_log": [
+      {
+        "phase": "0_themen_mapping",
+        "status": "ok",
+        "beobachtung": "Archetyp 1 und 2"
+      },
+      {
+        "phase": "1_2_facetten_thesaurus",
+        "status": "ok",
+        "beobachtung": "6 bis 8 Synonyme je Facette"
+      },
+      {
+        "phase": "3A_breite_suche",
+        "status": "rauschen_hoch",
+        "beobachtung": "OpenAlex bis Seite 4"
+      },
+      {
+        "phase": "3B_qualitativer_boost",
+        "status": "ok",
+        "beobachtung": "Zwei Transkript-Datensaetze, beide mit Anonymisierungserklaerung gesucht"
+      },
+      {
+        "phase": "3C_citation_snowballing",
+        "status": "ok",
+        "beobachtung": "2 Seed-Studien"
+      },
+      {
+        "phase": "3D_praxis_berichte",
+        "status": "ok",
+        "beobachtung": "UBA, Difu, ADFC"
+      },
+      {
+        "phase": "4_qualitaets_selektion",
+        "status": "ok",
+        "beobachtung": "Filterquote 75 Prozent"
+      },
+      {
+        "phase": "5_findings",
+        "status": "ok",
+        "beobachtung": "4 Eintraege geschrieben, Validator Stufe research ohne Fehler"
+      },
+      {
+        "phase": "6_lizenzpruefung",
+        "status": "ok",
+        "beobachtung": "Freigabeklassen: 3x K2, 1x K0 (ACM, keine Lizenz gefunden). Eine weitere Quelle ohne rechtmaessigen Zugang komplett gesperrt und aussortiert."
+      },
+      {
+        "phase": "7_dsgvo_pruefung",
+        "status": "ok",
+        "beobachtung": "Vertrauensvermutung griff bei einem Transkript-Datensatz; beim zweiten widerlegten R2 und R3 die Erklaerung, Aussortierung."
+      }
+    ],
+    "limitationen": [
+      "Rechtsstand der Pruefdateien: 2026-10-20",
+      "§ 60d UrhG: Ob der produktive Kompass-Einsatz noch wissenschaftlicher Forschungszweck ist, ist nicht geklaert",
+      "EDPB Guidelines 02/2026 sind Version 1.0 in Konsultation",
+      "Restrisiko: nicht veroeffentlichte Schluesselliste beim Forschenden fuehrt nicht zur Aussortierung (bewusste Projektentscheidung, siehe dsgvo-pruefung.md Abschnitt 13.1)"
+    ],
+    "aussortiert": [
+      {
+        "titel": "Beispielstudie hinter Paywall ohne Einrichtungszugang",
+        "doi_url": "https://doi.org/10.9999/beispiel.paywall",
+        "typ": "lizenz",
+        "grund": "gesperrt fuer N1, N2 und N3: kein rechtmaessiger Zugang fuer SHIFT. Zugriff bestand nur ueber einen Hochschulzugang. Damit greift keine TDM-Schranke.",
+        "nutzungsart": [
+          "N1",
+          "N2",
+          "N3"
+        ],
+        "aussortiert_am": "2026-10-20"
+      },
+      {
+        "titel": "Leitfadeninterviews Quartiersentwicklung (Beispiel mit Residuen)",
+        "doi_url": "https://doi.org/10.5281/zenodo.0000002",
+        "typ": "datenschutz",
+        "grund": "personenbezogen: R2 (Strassennamen und Haltestelle im Klartext in T4, T7, T9) und R3 (Leiterin des Tiefbauamts der benannten Gemeinde in T2). Die Anonymisierungserklaerung ist durch konkrete Residuen widerlegt.",
+        "nutzungsart": [],
+        "aussortiert_am": "2026-10-20"
+      }
+    ],
+    "review_queue": []
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "titel": "An introduction to radical participatory design",
+      "autoren": [
+        "Beispielautorin, A."
+      ],
+      "jahr": 2022,
+      "quelle_plattform": "OpenAlex",
+      "quelle_typ": "journal_article",
+      "doi_url": "https://doi.org/10.1017/dsj.2022.24",
+      "open_access": true,
+      "oa_status": "gold",
+      "abstract_kurzfassung": "Methodischer Beitrag zu partizipativer Gestaltung.",
+      "methodik": [
+        "review"
+      ],
+      "relevanz_begruendung": "Methodische Grundlage fuer Facette C.",
+      "facetten_treffer": [
+        "A",
+        "C"
+      ],
+      "schluesselwoerter": [
+        "participatory design"
+      ],
+      "zielgruppen_genannt": [
+        "Betroffene"
+      ],
+      "institutionen_genannt": [],
+      "laender_regionen": [
+        "global"
+      ],
+      "rohdaten_verfuegbar": false,
+      "rohdaten_format": null,
+      "qualitative_daten": {
+        "hat_interviews": false,
+        "interview_typ": "none",
+        "stichprobengroesse": null,
+        "transkripte_verfuegbar": false,
+        "interview_leitfaden_verfuegbar": false,
+        "zitate_im_text": false
+      },
+      "daten_anhaenge": [],
+      "lizenz": {
+        "geprueft_am": "2026-10-20",
+        "lizenz_bezeichnung": "CC BY",
+        "lizenz_beleg_url": "https://www.cambridge.org/core/journals/design-science",
+        "lizenz_quelle": "landing_page",
+        "rechtmaessiger_zugang": true,
+        "rechtevorbehalt": {
+          "gefunden": false,
+          "fundort": null,
+          "geprueft": [
+            "robots.txt",
+            "agb",
+            "tdmrep"
+          ]
+        },
+        "befund": {
+          "N1": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N2": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N3": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          }
+        },
+        "freigabeklasse": "K2_volltextwiedergabe",
+        "review_grund": null,
+        "loeschpflicht_notiert": false
+      },
+      "datenschutz": {
+        "geprueft_am": "2026-10-20",
+        "pruefumfang": "stichprobe",
+        "stichprobe_beschreibung": "Methodenteil, Danksagung und Anhangsverzeichnis vollstaendig gelesen; Review ohne Primaerdaten",
+        "befund": "kein_personenbezug",
+        "grundlage": "klassen_screening",
+        "anonymisierungserklaerung": {
+          "vorhanden": false,
+          "fundstelle": null,
+          "erklaerende_stelle": null,
+          "stelle_einschlaegig": null
+        },
+        "red_flags_geprueft": [
+          "R1",
+          "R2",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7",
+          "R8",
+          "R9"
+        ],
+        "red_flags_gefunden": [],
+        "art9_kategorien": [],
+        "art9_verschaerfter_massstab": false,
+        "art10_betroffen": false,
+        "dreikriterientest": {
+          "no_record_isolation": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_linkage": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_inference": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          }
+        },
+        "review_grund": null,
+        "aussortiert": false,
+        "aussortierungsgrund": null
+      }
+    },
+    {
+      "id": "F-002",
+      "titel": "Leitfadeninterviews zum Radwegeausbau (anonymisiert)",
+      "autoren": [
+        "Beispielforscherin, B."
+      ],
+      "jahr": 2024,
+      "quelle_plattform": "Zenodo",
+      "quelle_typ": "dataset",
+      "doi_url": "https://doi.org/10.5281/zenodo.0000001",
+      "open_access": true,
+      "oa_status": "gold",
+      "abstract_kurzfassung": "18 Leitfadeninterviews mit Anwohnenden, anonymisierte Transkripte und Codebook.",
+      "methodik": [
+        "qualitative_interviews",
+        "thematic_analysis"
+      ],
+      "relevanz_begruendung": "Direkte O-Toene Betroffener, Kernmaterial fuer die Stakeholder-Analyse.",
+      "facetten_treffer": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "schluesselwoerter": [
+        "Radweg",
+        "Anwohner"
+      ],
+      "zielgruppen_genannt": [
+        "Anwohnende"
+      ],
+      "institutionen_genannt": [
+        "Beispiel-Universitaet"
+      ],
+      "laender_regionen": [
+        "Deutschland"
+      ],
+      "rohdaten_verfuegbar": true,
+      "rohdaten_format": "docx",
+      "qualitative_daten": {
+        "hat_interviews": true,
+        "interview_typ": "semi_structured",
+        "stichprobengroesse": 18,
+        "transkripte_verfuegbar": true,
+        "interview_leitfaden_verfuegbar": true,
+        "zitate_im_text": true
+      },
+      "daten_anhaenge": [
+        {
+          "typ": "interview_transkripte",
+          "titel_beschreibung": "Transkripte der 18 Leitfadeninterviews",
+          "url": "https://zenodo.org/records/0000001/files/transkripte.zip",
+          "format": "zip",
+          "open_access": true,
+          "lizenz": {
+            "geprueft_am": "2026-10-20",
+            "lizenz_bezeichnung": "CC BY-NC 4.0",
+            "lizenz_beleg_url": "https://zenodo.org/records/0000001",
+            "lizenz_quelle": "api_feld",
+            "rechtmaessiger_zugang": true,
+            "rechtevorbehalt": {
+              "gefunden": false,
+              "fundort": null,
+              "geprueft": [
+                "robots.txt",
+                "agb",
+                "tdmrep"
+              ]
+            },
+            "befund": {
+              "N1": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              },
+              "N2": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              },
+              "N3": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              }
+            },
+            "freigabeklasse": "K2_volltextwiedergabe",
+            "review_grund": null,
+            "loeschpflicht_notiert": false
+          },
+          "datenschutz": {
+            "geprueft_am": "2026-10-20",
+            "pruefumfang": "volltext",
+            "stichprobe_beschreibung": "Methodenteil vollstaendig; je Transkript erste und letzte 500 Woerter; Volltextsuche nach Ortsangaben, Eigennamen und Organisationsbezeichnungen ueber alle 18 Dateien",
+            "befund": "kein_personenbezug",
+            "grundlage": "vertrauensvermutung",
+            "anonymisierungserklaerung": {
+              "vorhanden": true,
+              "fundstelle": "Methodenteil S. 4 und Data Availability Statement",
+              "erklaerende_stelle": "Beispiel-Universitaet, kuratiert ueber Zenodo-Community",
+              "stelle_einschlaegig": true
+            },
+            "red_flags_geprueft": [
+              "R1",
+              "R2",
+              "R3",
+              "R4",
+              "R5",
+              "R6",
+              "R7",
+              "R8",
+              "R9"
+            ],
+            "red_flags_gefunden": [],
+            "art9_kategorien": [],
+            "art9_verschaerfter_massstab": false,
+            "art10_betroffen": false,
+            "dreikriterientest": null,
+            "review_grund": null,
+            "aussortiert": false,
+            "aussortierungsgrund": null
+          }
+        },
+        {
+          "typ": "codebook",
+          "titel_beschreibung": "Codebook mit Kategoriensystem und Kodierregeln",
+          "url": "https://zenodo.org/records/0000001/files/codebook.pdf",
+          "format": "pdf",
+          "open_access": true,
+          "lizenz": {
+            "geprueft_am": "2026-10-20",
+            "lizenz_bezeichnung": "CC BY-NC 4.0",
+            "lizenz_beleg_url": "https://zenodo.org/records/0000001",
+            "lizenz_quelle": "api_feld",
+            "rechtmaessiger_zugang": true,
+            "rechtevorbehalt": {
+              "gefunden": false,
+              "fundort": null,
+              "geprueft": [
+                "robots.txt",
+                "agb",
+                "tdmrep"
+              ]
+            },
+            "befund": {
+              "N1": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              },
+              "N2": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              },
+              "N3": {
+                "ergebnis": "frei",
+                "grundlage": "CC BY-NC 4.0",
+                "traegt_ohne_60d": true,
+                "traegt_ohne_nc_praemisse": false
+              }
+            },
+            "freigabeklasse": "K2_volltextwiedergabe",
+            "review_grund": null,
+            "loeschpflicht_notiert": false
+          },
+          "datenschutz": {
+            "geprueft_am": "2026-10-20",
+            "pruefumfang": "stichprobe",
+            "stichprobe_beschreibung": "Codebook vollstaendig gelesen; enthaelt Variablendefinitionen und Kodierregeln, keine Zuordnung zu Klarnamen, daher keine Schluesselliste i.S.v. R6",
+            "befund": "kein_personenbezug",
+            "grundlage": "dreikriterientest",
+            "anonymisierungserklaerung": {
+              "vorhanden": false,
+              "fundstelle": null,
+              "erklaerende_stelle": null,
+              "stelle_einschlaegig": null
+            },
+            "red_flags_geprueft": [
+              "R1",
+              "R2",
+              "R3",
+              "R4",
+              "R5",
+              "R6",
+              "R7",
+              "R8",
+              "R9"
+            ],
+            "red_flags_gefunden": [],
+            "art9_kategorien": [],
+            "art9_verschaerfter_massstab": false,
+            "art10_betroffen": false,
+            "dreikriterientest": {
+              "no_record_isolation": {
+                "P1": true,
+                "P2": true,
+                "P3": true
+              },
+              "no_linkage": {
+                "P1": true,
+                "P2": true,
+                "P3": true
+              },
+              "no_inference": {
+                "P1": true,
+                "P2": true,
+                "P3": true
+              }
+            },
+            "review_grund": null,
+            "aussortiert": false,
+            "aussortierungsgrund": null
+          }
+        }
+      ],
+      "lizenz": {
+        "geprueft_am": "2026-10-20",
+        "lizenz_bezeichnung": "CC BY-NC 4.0",
+        "lizenz_beleg_url": "https://zenodo.org/records/0000001",
+        "lizenz_quelle": "api_feld",
+        "rechtmaessiger_zugang": true,
+        "rechtevorbehalt": {
+          "gefunden": false,
+          "fundort": null,
+          "geprueft": [
+            "robots.txt",
+            "agb",
+            "tdmrep"
+          ]
+        },
+        "befund": {
+          "N1": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY-NC 4.0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": false
+          },
+          "N2": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY-NC 4.0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": false
+          },
+          "N3": {
+            "ergebnis": "frei",
+            "grundlage": "CC BY-NC 4.0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": false
+          }
+        },
+        "freigabeklasse": "K2_volltextwiedergabe",
+        "review_grund": null,
+        "loeschpflicht_notiert": false
+      },
+      "datenschutz": {
+        "geprueft_am": "2026-10-20",
+        "pruefumfang": "volltext",
+        "stichprobe_beschreibung": "Methodenteil vollstaendig; je Transkript erste und letzte 500 Woerter; Volltextsuche nach Ortsangaben, Eigennamen und Organisationsbezeichnungen ueber alle 18 Dateien; verbleibende Angaben durchgehend vergroebert (Gemeindeebene, Altersgruppen)",
+        "befund": "kein_personenbezug",
+        "grundlage": "vertrauensvermutung",
+        "anonymisierungserklaerung": {
+          "vorhanden": true,
+          "fundstelle": "Methodenteil S. 4 und Data Availability Statement",
+          "erklaerende_stelle": "Beispiel-Universitaet, kuratiert ueber Zenodo-Community",
+          "stelle_einschlaegig": true
+        },
+        "red_flags_geprueft": [
+          "R1",
+          "R2",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7",
+          "R8",
+          "R9"
+        ],
+        "red_flags_gefunden": [],
+        "art9_kategorien": [],
+        "art9_verschaerfter_massstab": false,
+        "art10_betroffen": false,
+        "dreikriterientest": null,
+        "review_grund": null,
+        "aussortiert": false,
+        "aussortierungsgrund": null
+      }
+    },
+    {
+      "id": "F-003",
+      "titel": "Participatory Design and Participatory Research (Verlagsinhalt)",
+      "autoren": [
+        "Beispielautor, C."
+      ],
+      "jahr": 2017,
+      "quelle_plattform": "OpenAlex",
+      "quelle_typ": "journal_article",
+      "doi_url": "https://doi.org/10.1145/3145472",
+      "open_access": false,
+      "oa_status": "closed",
+      "abstract_kurzfassung": "Verhaeltnis partizipativer Gestaltung zu partizipativer Forschung.",
+      "methodik": [
+        "review"
+      ],
+      "relevanz_begruendung": "Einschlaegig fuer Facette A und B.",
+      "facetten_treffer": [
+        "A",
+        "B"
+      ],
+      "schluesselwoerter": [
+        "participatory design"
+      ],
+      "zielgruppen_genannt": [],
+      "institutionen_genannt": [
+        "ACM"
+      ],
+      "laender_regionen": [
+        "global"
+      ],
+      "rohdaten_verfuegbar": false,
+      "rohdaten_format": null,
+      "qualitative_daten": {
+        "hat_interviews": false,
+        "interview_typ": "none",
+        "stichprobengroesse": null,
+        "transkripte_verfuegbar": false,
+        "interview_leitfaden_verfuegbar": false,
+        "zitate_im_text": false
+      },
+      "daten_anhaenge": [],
+      "lizenz": {
+        "geprueft_am": "2026-10-20",
+        "lizenz_bezeichnung": null,
+        "lizenz_beleg_url": null,
+        "lizenz_quelle": "keine",
+        "rechtmaessiger_zugang": true,
+        "rechtevorbehalt": {
+          "gefunden": true,
+          "fundort": "robots.txt (dl.acm.org): GPTBot, CCBot, Google-Extended jeweils Disallow /",
+          "geprueft": [
+            "robots.txt",
+            "agb",
+            "tdmrep"
+          ]
+        },
+        "befund": {
+          "N1": {
+            "ergebnis": "gestattet_schranke",
+            "grundlage": "§ 60d UrhG (gegen Vorbehalt immun)",
+            "traegt_ohne_60d": false,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N2": {
+            "ergebnis": "gesperrt",
+            "grundlage": null,
+            "traegt_ohne_60d": false,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N3": {
+            "ergebnis": "nicht_pruefbar",
+            "grundlage": null,
+            "traegt_ohne_60d": false,
+            "traegt_ohne_nc_praemisse": true
+          }
+        },
+        "freigabeklasse": "K0_keine_freigabe",
+        "k0_grund": "keine_lizenz_gefunden",
+        "review_grund": "Verlags-Copyright ohne Nutzungslizenz, Landing Page und Nutzungsbedingungen gelesen. N1 truege nur ueber § 60d, weil der Rechtevorbehalt § 44b sperrt; das Projekt nutzt Quellen ohne Lizenz nicht. N2 ohne Weitergabegrundlage gesperrt. N3 nicht pruefbar, keine Anhaenge zugaenglich. Moeglich: Lizenzanfrage bei ACM.",
+        "loeschpflicht_notiert": true
+      },
+      "datenschutz": {
+        "geprueft_am": "2026-10-20",
+        "pruefumfang": "stichprobe",
+        "stichprobe_beschreibung": "Abstract und Metadaten geprueft; Volltext nicht zugaenglich, Klasse Review ohne Primaerdaten, daher kein realistisches Personenbezugsrisiko",
+        "befund": "kein_personenbezug",
+        "grundlage": "klassen_screening",
+        "anonymisierungserklaerung": {
+          "vorhanden": false,
+          "fundstelle": null,
+          "erklaerende_stelle": null,
+          "stelle_einschlaegig": null
+        },
+        "red_flags_geprueft": [
+          "R1",
+          "R2",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7",
+          "R8",
+          "R9"
+        ],
+        "red_flags_gefunden": [],
+        "art9_kategorien": [],
+        "art9_verschaerfter_massstab": false,
+        "art10_betroffen": false,
+        "dreikriterientest": {
+          "no_record_isolation": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_linkage": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_inference": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          }
+        },
+        "review_grund": null,
+        "aussortiert": false,
+        "aussortierungsgrund": null
+      }
+    },
+    {
+      "id": "F-004",
+      "titel": "Radverkehr in Mittelstaedten (Beispiel-Behoerdenbericht)",
+      "autoren": [
+        "Umweltbundesamt"
+      ],
+      "jahr": 2025,
+      "quelle_plattform": "UBA",
+      "quelle_typ": "municipal_report",
+      "doi_url": "https://www.umweltbundesamt.de/beispiel-bericht",
+      "open_access": true,
+      "oa_status": "gold",
+      "abstract_kurzfassung": "Auswertung kommunaler Radverkehrsdaten mit Fallbeispielen.",
+      "methodik": [
+        "survey",
+        "review"
+      ],
+      "relevanz_begruendung": "Praxisperspektive und Kommunaldaten.",
+      "facetten_treffer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "schluesselwoerter": [
+        "Radverkehr",
+        "Kommune"
+      ],
+      "zielgruppen_genannt": [
+        "Kommunalverwaltung"
+      ],
+      "institutionen_genannt": [
+        "UBA"
+      ],
+      "laender_regionen": [
+        "Deutschland"
+      ],
+      "rohdaten_verfuegbar": false,
+      "rohdaten_format": null,
+      "qualitative_daten": {
+        "hat_interviews": false,
+        "interview_typ": "none",
+        "stichprobengroesse": null,
+        "transkripte_verfuegbar": false,
+        "interview_leitfaden_verfuegbar": false,
+        "zitate_im_text": false
+      },
+      "daten_anhaenge": [],
+      "lizenz": {
+        "geprueft_am": "2026-10-20",
+        "lizenz_bezeichnung": "dl-de/by-2-0",
+        "lizenz_beleg_url": "https://www.umweltbundesamt.de/impressum",
+        "lizenz_quelle": "nutzungsbedingungen",
+        "rechtmaessiger_zugang": true,
+        "rechtevorbehalt": {
+          "gefunden": false,
+          "fundort": null,
+          "geprueft": [
+            "robots.txt",
+            "agb",
+            "tdmrep"
+          ]
+        },
+        "befund": {
+          "N1": {
+            "ergebnis": "frei",
+            "grundlage": "dl-de/by-2-0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N2": {
+            "ergebnis": "frei",
+            "grundlage": "dl-de/by-2-0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          },
+          "N3": {
+            "ergebnis": "frei",
+            "grundlage": "dl-de/by-2-0",
+            "traegt_ohne_60d": true,
+            "traegt_ohne_nc_praemisse": true
+          }
+        },
+        "freigabeklasse": "K2_volltextwiedergabe",
+        "review_grund": null,
+        "loeschpflicht_notiert": false
+      },
+      "datenschutz": {
+        "geprueft_am": "2026-10-20",
+        "pruefumfang": "stichprobe",
+        "stichprobe_beschreibung": "Fallbeispiele und Beteiligtenangaben vollstaendig gelesen; Kommunen benannt, Einzelpersonen nur in Funktionsbezeichnungen grosser Verwaltungen, keine Singularitaet i.S.v. R3",
+        "befund": "kein_personenbezug",
+        "grundlage": "dreikriterientest",
+        "anonymisierungserklaerung": {
+          "vorhanden": false,
+          "fundstelle": null,
+          "erklaerende_stelle": null,
+          "stelle_einschlaegig": null
+        },
+        "red_flags_geprueft": [
+          "R1",
+          "R2",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7",
+          "R8",
+          "R9"
+        ],
+        "red_flags_gefunden": [],
+        "art9_kategorien": [],
+        "art9_verschaerfter_massstab": false,
+        "art10_betroffen": false,
+        "dreikriterientest": {
+          "no_record_isolation": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_linkage": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          },
+          "no_inference": {
+            "P1": true,
+            "P2": true,
+            "P3": true
+          }
+        },
+        "review_grund": null,
+        "aussortiert": false,
+        "aussortierungsgrund": null
+      }
+    }
+  ]
+}

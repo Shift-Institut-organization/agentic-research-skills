@@ -12,6 +12,10 @@ Eintrag in findings.json
         │
         ├─ download: false?  ──▶  ÜBERSPRINGEN (manuell gesetzt)
         │
+        ├─ Nutzungsregel (nutzungsregel.py, findings-schema.md 3.4)
+        │     K0, personenbezogen, nicht_pruefbar, aussortiert  ──▶  NIE LADEN (skipped_gesperrt)
+        │     Datenschutz zweifelhaft oder ausstehend          ──▶  NICHT LADEN (skipped_review)
+        │
         ├─ local_path gesetzt? ──▶  ÜBERSPRINGEN (bereits vorhanden, Idempotenz)
         │
         ├─ open_access: true  ──▶  HERUNTERLADEN
@@ -23,19 +27,25 @@ Eintrag in findings.json
         └─ Sonst  ──▶  status: "skipped_no_oa", weiter
 ```
 
+Jeder Datenanhang durchläuft die Nutzungsregel mit seinen eigenen `lizenz`- und
+`datenschutz`-Blöcken, unabhängig vom Ergebnis der Quelle.
+
 ---
 
-## 1. Open Access PDFs & Bot-Blocker-Bypass (OpenAlex, Unpaywall, Repositories)
+## 1. Open Access PDFs: andere Fundorte statt Umgehung (OpenAlex, Repositories)
 
 **Wann:** `open_access: true` + `quelle_typ: "journal_article"` oder `"preprint"`
 
-Viele Verlage (z. B. ScienceDirect/Elsevier, MDPI) blockieren automatisierte HTTP-Anfragen via Cloudflare oder Akamai (HTTP 403 Forbidden). Da die Arbeiten jedoch Open Access sind, existieren legale, unblockierte Volltexte in universitären Repositories, Preprint-Servern und Archiven.
+Viele Verlage (z. B. ScienceDirect/Elsevier, MDPI) lehnen automatisierte Abrufe ab (HTTP 403).
+Diese Ablehnung wird **respektiert**: kein Browser-User-Agent, keine Ausweichwerkzeuge. Bei
+Open-Access-Arbeiten liegt aber oft eine weitere, frei abrufbare Fassung in einem
+Hochschulrepositorium, auf einem Preprint-Server oder in PubMed Central. Nur diese wird gesucht.
 
-**Bypass-Strategie via OpenAlex API:**
-1. DOI bei OpenAlex abfragen:
+**Fallback über die OpenAlex API:**
+1. DOI bei OpenAlex abfragen, mit Schlüssel aus `OPENALEX_API_KEY`, falls gesetzt:
    ```
-   GET https://api.openalex.org/works/https://doi.org/<DOI>
-   User-Agent: DataFetch/1.0 (mailto:research@example.com)
+   GET https://api.openalex.org/works/https://doi.org/<DOI>?api_key=<OPENALEX_API_KEY>
+   User-Agent: DataFetch-daten-download/1.0 (Forschungsrecherche SHIFT)
    ```
 2. Im Feld `locations` nach allen `pdf_url` filtern, die nicht auf die blockierte Verlagsdomain verweisen:
    - Universitäts-Repositorien (z. B. `pure.*`, `repository.*`, `orbi.*`, `ueaeprints.*`, `research.*`)
@@ -49,14 +59,14 @@ Viele Verlage (z. B. ScienceDirect/Elsevier, MDPI) blockieren automatisierte HTT
 
 **Wann:** `quelle_plattform: "Zenodo"` oder `doi_url` enthält `zenodo`
 
-**Wichtig für Windows:** Niemals Windows `curl.exe` ohne `--ssl-no-revoke` oder Standard-PowerShell-WebRequests gegen Zenodo ausführen, da die Windows-Schannel-Zertifikatsprüfung (CRL/OCSP) zu 30-Sekunden-Timeouts (HTTP 504 / Connection Timeout) führt. Stattdessen Python native `urllib.request` (nutzt OpenSSL und TLS 1.3) verwenden!
+**Wichtig für Windows:** Zenodo nicht über `curl.exe` oder PowerShell-WebRequests laden. Die Windows-Schannel-Zertifikatsprüfung (CRL/OCSP) führt dort zu 30-Sekunden-Timeouts. Python `urllib.request` nutzt OpenSSL und hat das Problem nicht. Die Zertifikatsprüfung abzuschalten (`--ssl-no-revoke`) ist keine Lösung.
 
 **API-Workflow:**
 1. Record-Metadaten abfragen:
    ```python
    import urllib.request, json
    url = f"https://zenodo.org/api/records/{record_id}"
-   req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+   req = urllib.request.Request(url, headers={"User-Agent": "DataFetch-daten-download/1.0"})
    with urllib.request.urlopen(req, timeout=15) as resp:
        data = json.loads(resp.read().decode('utf-8'))
    ```
@@ -117,7 +127,7 @@ arxiv_id = "2301.12345"
 pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
 dest_file = Path("data/raw/<thema>/pdfs") / f"{year}_{author}_{title_slug}_{id}.pdf"
 
-req = urllib.request.Request(pdf_url, headers={"User-Agent": "Mozilla/5.0"})
+req = urllib.request.Request(pdf_url, headers={"User-Agent": "DataFetch-daten-download/1.0"})
 with urllib.request.urlopen(req, timeout=30) as resp:
     dest_file.write_bytes(resp.read())
 ```
@@ -191,7 +201,7 @@ def download_with_retry(url: str, dest_path: Path, max_retries: int = 3, timeout
     delay = 2
     for attempt in range(max_retries):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "DataFetch-daten-download/1.0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 content = resp.read()
                 if len(content) > 1000:
@@ -213,10 +223,10 @@ Die gesamte Pipeline (Plattform-Erkennung, Zenodo-Urllib-Streaming, OpenAlex-Fal
 
 ### 1. Download-Pipeline:
 ```python
-python .agents/skills/daten_download/scripts/download_findings.py --findings "findings_<thema>.json"
+python .claude/skills/daten-download/scripts/download_findings.py --findings "findings_<thema>.json"
 ```
 
 ### 2. Download- & Zitatbericht (Erkennung von O-Tönen in allen PDFs):
 ```python
-python .agents/skills/daten_download/scripts/generate_download_report.py --findings "findings_<thema>.json"
+python .claude/skills/daten-download/scripts/generate_download_report.py --findings "findings_<thema>.json"
 ```

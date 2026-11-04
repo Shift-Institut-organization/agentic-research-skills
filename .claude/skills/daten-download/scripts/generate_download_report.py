@@ -2,7 +2,7 @@
 """
 generate_download_report.py
 ---------------------------
-Erstellt einen umfassenden Download- und Qualitätsbericht für den 'daten_download'-Skill.
+Erstellt einen umfassenden Download- und Qualitätsbericht für den Skill 'daten-download'.
 Liest alle gespeicherten Volltexte (PDFs, Berichte) ein, durchsucht sie automatisiert
 nach qualitativen O-Tönen und Teilnehmer-Zitaten und dokumentiert die Ergebnisse in
 einem strukturierten Markdown-Bericht ('download_report_<thema>.md').
@@ -25,10 +25,13 @@ except ImportError:
     print("[!] FEHLER: 'pypdf' ist nicht installiert. Bitte mit 'pip install pypdf' installieren.")
     sys.exit(1)
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nutzungsregel import aussortiert_schluessel, nutzungsstatus, quelle_schluessel  # noqa: E402
+
 def find_workspace_root() -> Path:
     current = Path.cwd().resolve()
     for p in [current] + list(current.parents):
-        if (p / ".agents").exists() or (p / ".git").exists():
+        if (p / ".claude").exists() or (p / ".git").exists():
             return p
     return current
 
@@ -130,6 +133,8 @@ def generate_report(findings_path: Path, output_path: Path = None, max_quotes_pe
     skipped_no_oa = 0
     skipped_manual = 0
     failed_downloads = 0
+    nicht_genutzt = 0
+    aussortiert = aussortiert_schluessel(meta)
 
     print("=" * 65)
     print("DOWNLOAD-REPORT GENERIERUNG & QUALITATIVE ZITAT-ANALYSE")
@@ -148,6 +153,12 @@ def generate_report(findings_path: Path, output_path: Path = None, max_quotes_pe
         jahr = item.get("jahr", "ND")
         lp = item.get("local_path")
         status = item.get("download_status", "unknown")
+
+        # Nur Quellen, die nach der Nutzungsregel genutzt werden dürfen. Das gilt auch
+        # für Dateien, die aus einem früheren Lauf noch lokal liegen.
+        if nutzungsstatus(item, quelle_schluessel(item), aussortiert)[0] != "nutzen":
+            nicht_genutzt += 1
+            continue
 
         if status == "skipped_no_oa":
             skipped_no_oa += 1
@@ -173,6 +184,7 @@ def generate_report(findings_path: Path, output_path: Path = None, max_quotes_pe
         
         doc_analyses.append({
             "id": fid,
+            "klasse": (item.get("lizenz") or {}).get("freigabeklasse", "")[:2],
             "title": titel,
             "author": autoren[0] if autoren else "Anon",
             "year": jahr,
@@ -206,22 +218,26 @@ def generate_report(findings_path: Path, output_path: Path = None, max_quotes_pe
     md.append(f"| **Mit qualitativen Abschnitten** | {len(docs_with_sections)} | Enthalten qualitative Methodik-/Befragungsabschnitte |")
     md.append(f"| **Übersprungen (kein Open Access)** | {skipped_no_oa} | Paywall-Arbeiten (Metadaten & Abstract gesichert) |")
     md.append(f"| **Übersprungen (manuell)** | {skipped_manual} | Manuell durch `download: false` markiert |")
-    md.append(f"| **Fehlgeschlagen (Bot/Block)** | {failed_downloads} | Konnten auch via Repositorien nicht geladen werden |\n")
+    md.append(f"| **Fehlgeschlagen (abgelehnt)** | {failed_downloads} | Konnten auch via Repositorien nicht geladen werden |")
+    md.append(f"| **Nicht genutzt (Rechteprüfung)** | {nicht_genutzt} | K0, Personenbezug, nicht prüfbar, aussortiert oder Review offen; nicht gescannt |\n")
     md.append("---\n")
 
     # 2. Qualitative Übersichtstabelle
     md.append("## 2. Übersicht aller geprüften Volltexte\n")
-    md.append("| ID | Jahr | Erstautor | Kurztitel | Seiten | O-Töne? | Fundstellen | Lokale Datei |")
-    md.append("|---|---|---|---|---|---|---|---|")
+    md.append("| ID | Klasse | Jahr | Erstautor | Kurztitel | Seiten | O-Töne? | Fundstellen | Lokale Datei |")
+    md.append("|---|---|---|---|---|---|---|---|---|")
     for d in doc_analyses:
         q_status = "✅ Ja" if len(d["quotes"]) > 0 else ("🔍 Sektionen" if len(d["sections"]) > 0 else "Nein")
         q_summary = f"{len(d['quotes'])} Zitate" if d['quotes'] else (f"{len(d['sections'])} Abschnitte" if d['sections'] else "-")
         pages = f"{d['page_count']} S." if d['page_count'] > 0 else "-"
-        md.append(f"| **{d['id']}** | {d['year']} | {d['author']} | {d['title'][:38]}... | {pages} | {q_status} | {q_summary} | `{d['file_name']}` |")
+        md.append(f"| **{d['id']}** | {d['klasse']} | {d['year']} | {d['author']} | {d['title'][:38]}... | {pages} | {q_status} | {q_summary} | `{d['file_name']}` |")
     md.append("\n---\n")
 
     # 3. Extrahierte Zitate & O-Töne
     md.append("## 3. Extrahierte Teilnehmer-Zitate & O-Töne für Personas & Stakeholder\n")
+    md.append("> Nur zur internen Auswertung. Aus K1-Quellen darf nach außen nur kurz und mit "
+              "Quellenangabe zitiert werden (§§ 51, 63 UrhG). Personas werden aus den Aussagen "
+              "abgeleitet und nicht mit echten Zitaten bestückt, die eine Person erkennbar machen.\n")
     if not docs_with_quotes:
         md.append("_In den geprüften Volltexten wurden keine wörtlichen Teilnehmer-Zitate nach dem Standard-Attributionsmuster gefunden._\n")
     else:
@@ -245,10 +261,10 @@ def generate_report(findings_path: Path, output_path: Path = None, max_quotes_pe
 
     # 4. Empfehlungen für Stakeholder-Analyse
     md.append("---\n")
-    md.append("## 4. Empfehlungen für die Stakeholder-Analyse (`stakeholder_analyse`)\n")
+    md.append("## 4. Empfehlungen für die Stakeholder-Analyse (`stakeholder-analyse`)\n")
     if docs_with_quotes:
         top_doc = docs_with_quotes[0]
-        md.append(f"1. **Primärquelle für Personas:** Das Dokument **[{top_doc['id']}]** (`{top_doc['file_name']}`) bietet authentische O-Töne von Nutzern, Radfahrenden und Betroffenen. Diese sollten direkt als Zitate in den Persona-Profilen hinterlegt werden.")
+        md.append(f"1. **Primärquelle für Personas:** Das Dokument **[{top_doc['id']}]** (`{top_doc['file_name']}`) bietet O-Töne von Nutzern, Radfahrenden und Betroffenen. Sie belegen Ziele und Pain Points der Personas; als Kern-Zitat einer Persona dienen sie nur sinngemäß, mit Beleg-ID.")
     md.append("2. **Praxisberichte & Kommunalrichtlinien:** Dokumente aus `reports/` (z. B. Difu, UBA, ACE) enthalten institutionelle Stakeholder-Anforderungen und organisatorische Reibungspunkte.")
     md.append("3. **Stichproben-Abgleich:** Die in `findings.json` gepflegten Stichprobengrößen (`qualitative_daten.stichprobengroesse`) bilden die empirische Grundlage für die quantitative Priorisierung in der Stakeholder-Map.\n")
 

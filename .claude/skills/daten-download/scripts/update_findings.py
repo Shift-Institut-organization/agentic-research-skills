@@ -24,6 +24,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nutzungsregel import aussortiert_schluessel, nutzungsstatus, quelle_schluessel  # noqa: E402
+
 VALID_STATUSES = {
     "success",
     "failed",
@@ -31,6 +34,8 @@ VALID_STATUSES = {
     "skipped_manual",
     "skipped_existing",
     "skipped_too_large",
+    "skipped_gesperrt",
+    "skipped_review",
 }
 
 
@@ -76,6 +81,16 @@ def main():
     if entry is None:
         print(f"FEHLER: ID '{args.entry_id}' nicht in findings.json gefunden.", file=sys.stderr)
         sys.exit(1)
+
+    # Auch ein manueller Download unterliegt der Nutzungsregel.
+    if args.download_status == "success" or args.local_path:
+        status, grund = nutzungsstatus(entry, quelle_schluessel(entry),
+                                       aussortiert_schluessel(data.get("meta")))
+        if status != "nutzen":
+            print(f"FEHLER: [{args.entry_id}] darf nicht genutzt werden ({grund}). "
+                  "Kein lokaler Pfad gesetzt; eine bereits geladene Datei bitte löschen.",
+                  file=sys.stderr)
+            sys.exit(1)
 
     entry["download_status"] = args.download_status
     entry["download_timestamp"] = datetime.now(timezone.utc).isoformat()

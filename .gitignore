@@ -9,6 +9,7 @@ __pycache__/
 *$py.class
 .venv/
 env/
+.agents/plugins
 
 # Operating system & Editor files
 .DS_Store

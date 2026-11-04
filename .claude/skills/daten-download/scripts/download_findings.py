@@ -2,16 +2,27 @@
 """
 download_findings.py
 --------------------
-Universeller, automatisierter Downloader für den 'daten_download'-Skill.
-Liest eine beliebige 'findings_<thema>.json' ein und lädt alle Open-Access-Quellen
-sowie echte Datenanhänge strukturiert in 'data/raw/<thema>/' herunter.
+Universeller, automatisierter Downloader für den Skill 'daten-download'.
+Liest eine 'findings_<thema>.json' nach source-compliance-check ein und lädt die
+Quellen und echten Datenanhänge, die genutzt werden dürfen, strukturiert in
+'data/raw/<thema>/' herunter.
+
+Was geladen wird, entscheidet allein nutzungsregel.py (findings-schema.md, 3.4):
+  - Freigabeklasse K1 oder K2 UND Datenschutzbefund kein_personenbezug -> laden
+  - Datenschutzbefund zweifelhaft -> nicht laden, wartet auf das Review
+  - K0, personenbezogen, nicht_pruefbar, fehlende Blöcke, meta.aussortiert -> nicht laden
+Jeder Datenanhang wird mit seinen eigenen Blöcken beurteilt, unabhängig von der Quelle.
+Ohne abgeschlossene Rechteprüfung (meta.lizenz_geprueft und meta.dsgvo_geprueft)
+bricht das Skript ab.
 
 Unterstützt:
   - Universelle Pfad- & Themen-Erkennung (via CLI --findings oder Auto-Discovery)
   - Einheitliches Benennungsschema: {Jahr}_{Erstautor}_{TitelSlug}_{ID}.{ext}
   - Direkte Open-Access-Downloads (Springer, Reports, Zeitschriften)
   - Native Zenodo-Integration via urllib (OpenSSL, verhindert Schannel-Timeouts)
-  - OpenAlex-Repository-Fallback bei HTTP 403 / Bot-Protection (Elsevier/MDPI)
+  - OpenAlex-Fallback auf andere Open-Access-Fundorte (Repositorien, PMC), wenn der
+    Verlag den Abruf ablehnt. Bot-Schutz wird nicht umgangen: Das Skript meldet sich
+    mit eigenem User-Agent und versucht keine Tarnung.
   - Figshare-API-Auflösung für institutionelle Preprints & Dissertationen
   - Intelligente Duplikaterkennung (kein redundanter Download von Haupt-Paper-URLs)
   - Idempotenz (bereits vorhandene Dateien werden übersprungen)
@@ -22,24 +33,27 @@ import json
 import os
 import re
 import sys
-import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nutzungsregel import (  # noqa: E402
+    anhang_schluessel, aussortiert_schluessel, compliance_geprueft, nutzungsstatus,
+    quelle_schluessel,
 )
+
+# Ehrlicher User-Agent: Blockt ein Verlag automatisierte Abrufe, wird das respektiert
+# und als failed gemeldet, nicht mit einem Browser-User-Agent umgangen.
+USER_AGENT = "DataFetch-daten-download/1.0 (Forschungsrecherche SHIFT)"
 
 def find_workspace_root() -> Path:
     """Sucht das Wurzelverzeichnis des Repositories anhand von Marker-Dateien."""
     current = Path.cwd().resolve()
     for p in [current] + list(current.parents):
-        if (p / ".agents").exists() or (p / ".git").exists():
+        if (p / ".claude").exists() or (p / ".git").exists():
             return p
     return current
 
@@ -95,17 +109,8 @@ def generate_filename(item: dict, ext: str = ".pdf", suffix: str = "") -> str:
         return f"{year}_{author}_{title_slug}_{fid}{clean_suf}{ext}"
     return f"{year}_{author}_{title_slug}_{fid}{ext}"
 
-def _safe_delete(p: Path):
-    if p.exists():
-        for _ in range(3):
-            try:
-                p.unlink()
-                break
-            except OSError:
-                time.sleep(0.2)
-
 def download_stream(url: str, dest_path: Path, timeout: int = 30) -> bool:
-    """Lädt eine URL via Pythons native urllib herunter (OpenSSL-basiert) mit curl-Fallback."""
+    """Lädt eine URL via Pythons native urllib herunter (OpenSSL-basiert)."""
     if not url or url.startswith("local://"):
         return False
 
@@ -113,7 +118,6 @@ def download_stream(url: str, dest_path: Path, timeout: int = 30) -> bool:
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml,application/pdf,*/*;q=0.9"
     }
-    # 1. Versuch: Python urllib (OpenSSL)
     try:
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -126,38 +130,20 @@ def download_stream(url: str, dest_path: Path, timeout: int = 30) -> bool:
                 return True
     except Exception:
         pass
-
-    # 2. Versuch: curl.exe in temporäre Datei
-    import subprocess
-    import uuid
-    temp_file = dest_path.parent / f"_temp_{uuid.uuid4().hex[:8]}.bin"
-    cmd = [
-        "curl.exe", "-s", "-L",
-        "--ssl-no-revoke",
-        "-A", USER_AGENT,
-        "--max-time", str(timeout),
-        "-o", str(temp_file),
-        url
-    ]
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        if res.returncode == 0 and temp_file.exists():
-            size = temp_file.stat().st_size
-            if size > 1000:
-                with open(temp_file, "rb") as f:
-                    content = f.read()
-                if dest_path.suffix.lower() == ".pdf" and b"<html" in content[:250].lower():
-                    _safe_delete(temp_file)
-                    return False
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                dest_path.write_bytes(content)
-                _safe_delete(temp_file)
-                return True
-            else:
-                _safe_delete(temp_file)
-    except Exception:
-        _safe_delete(temp_file)
     return False
+
+def warne_bei_lokaler_kopie(obj: dict, sammlung: list, label: str = None):
+    """
+    Merkt eine vorhandene lokale Datei einer gesperrten Quelle oder eines gesperrten
+    Anhangs vor. Geloescht wird nicht automatisch: Das entscheidet ein Mensch, aber
+    die Datei darf nicht unbemerkt im Datenpool bleiben.
+    """
+    lp = obj.get("local_path")
+    if lp and (WORKSPACE_ROOT / lp).exists():
+        sammlung.append(f"{label or obj.get('id', '?')}: {lp} ({obj.get('download_error')})")
+        obj["local_path_gesperrt"] = lp
+        obj["local_path"] = None
+
 
 def resolve_figshare_pdf(url: str) -> str | None:
     """Extrahiert direkte Figshare-Download-URL aus Figshare/Institutional-Artikeln."""
@@ -183,7 +169,9 @@ def resolve_openalex_pdf(doi: str) -> list[str]:
         return []
     clean_doi = doi.replace("https://doi.org/", "").strip()
     api_url = f"https://api.openalex.org/works/https://doi.org/{clean_doi}"
-    headers = {"User-Agent": f"ShiftDataFetch/1.0 (mailto:shift@student.uni.de)"}
+    if os.environ.get("OPENALEX_API_KEY"):
+        api_url += f"?api_key={os.environ['OPENALEX_API_KEY']}"
+    headers = {"User-Agent": USER_AGENT}
     candidates = []
     try:
         req = urllib.request.Request(api_url, headers=headers)
@@ -282,6 +270,16 @@ def main():
     with open(findings_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # 1b. Ohne abgeschlossene Rechteprüfung wird nichts geladen
+    meta = data.get("meta", {})
+    if not compliance_geprueft(meta):
+        print("[!] ABBRUCH: Die Rechteprüfung ist für diese Datei nicht abgeschlossen "
+              "(meta.lizenz_geprueft oder meta.dsgvo_geprueft fehlt).")
+        print("    Zuerst den Skill source-compliance-check ausführen. Ohne Lizenz- und "
+              "Datenschutzbefund darf keine Quelle geladen werden.")
+        sys.exit(1)
+    aussortiert = aussortiert_schluessel(meta)
+
     # 2. Thema ermitteln
     meta_thema = data.get("meta", {}).get("thema", "")
     if not meta_thema:
@@ -320,9 +318,14 @@ def main():
         "skipped_existing": 0,
         "skipped_no_oa": 0,
         "skipped_manual": 0,
+        "skipped_gesperrt": 0,
+        "skipped_review": 0,
         "failed": 0,
-        "attachments_downloaded": 0
+        "attachments_downloaded": 0,
+        "anhang_skipped_gesperrt": 0,
+        "anhang_skipped_review": 0,
     }
+    gesperrt_lokal = []  # lokale Kopien von Quellen, die nicht (mehr) genutzt werden dürfen
 
     for item in findings:
         fid = item.get("id", "F-???")
@@ -336,115 +339,134 @@ def main():
 
         print(f"\n[{fid}] {title}")
 
-        # 1. Manuell ausgeschlossen
+        # 1. Manuell ausgeschlossen (gilt auch für die Anhänge)
         if download_flag is False:
             print("  [-] Übersprungen (download: false)")
             item["download_status"] = "skipped_manual"
             stats["skipped_manual"] += 1
             continue
 
-        # 2. Kein Open Access
-        if not is_oa and not ("dataset" in qtyp or "zenodo" in plat.lower()):
+        # 2. Nutzungsregel: Lizenz und Datenschutz der Quelle selbst
+        status, grund = nutzungsstatus(item, quelle_schluessel(item), aussortiert)
+        download_url = doi_url
+        if status != "nutzen":
+            key = "skipped_review" if status == "warten" else "skipped_gesperrt"
+            print(f"  [-] Nicht geladen ({grund})")
+            item["download_status"] = key
+            item["download_error"] = grund
+            stats[key] += 1
+            warne_bei_lokaler_kopie(item, gesperrt_lokal)
+
+        # 3. Kein Open Access
+        elif not is_oa and not ("dataset" in qtyp or "zenodo" in plat.lower()):
             print("  [-] Übersprungen (kein Open Access)")
             item["download_status"] = "skipped_no_oa"
             stats["skipped_no_oa"] += 1
-            continue
 
-        # 3. Zielordner bestimmen
-        if "dataset" in qtyp or "zenodo" in plat.lower():
-            cat = "dataset"
-        elif "report" in qtyp or "guideline" in qtyp:
-            cat = "report"
-        elif "software" in qtyp:
-            cat = "software"
         else:
-            cat = "pdf"
-        target_dir = subdirs[cat]
+            # 4. Zielordner bestimmen
+            if "dataset" in qtyp or "zenodo" in plat.lower():
+                cat = "dataset"
+            elif "report" in qtyp or "guideline" in qtyp:
+                cat = "report"
+            elif "software" in qtyp:
+                cat = "software"
+            else:
+                cat = "pdf"
+            target_dir = subdirs[cat]
 
-        download_url = doi_url
-        if not download_url and anhaenge and anhaenge[0].get("url") and not anhaenge[0].get("url").startswith("local://"):
-            download_url = anhaenge[0].get("url")
+            if not download_url and anhaenge and anhaenge[0].get("url") and not anhaenge[0].get("url").startswith("local://"):
+                download_url = anhaenge[0].get("url")
 
-        # 4. Prüfen ob bereits lokal vorhanden (Idempotenz)
-        existing_local = item.get("local_path")
-        if existing_local and (WORKSPACE_ROOT / existing_local).exists() and (WORKSPACE_ROOT / existing_local).stat().st_size > 1000:
-            print(f"  [=] Bereits lokal vorhanden: {existing_local}")
-            stats["skipped_existing"] += 1
-            item["download_status"] = "success"
-        elif args.dry_run:
-            print("  [DRY-RUN] Würde heruntergeladen werden.")
-        else:
-            success = False
-            dest_file = target_dir / generate_filename(item, ext=".pdf")
-            try:
-                # Fall A: Zenodo Record
-                if "zenodo" in plat.lower() or "zenodo.org" in doi_url:
-                    rec_match = re.search(r'zenodo\.(\d+)', doi_url)
-                    if rec_match:
-                        rec_id = rec_match.group(1)
-                        print(f"  [↓] Lade Zenodo-Record {rec_id} via urllib...")
-                        saved = download_zenodo_record(rec_id, target_dir, item)
-                        if saved:
-                            success = True
-                            item["local_path"] = saved[0]
-                            item["local_path_type"] = Path(saved[0]).suffix.lstrip(".")
-                            stats["success"] += 1
-                            print(f"  [OK] Zenodo gespeichert: {saved[0]}")
-                else:
-                    if download_url and download_url.startswith("local://"):
+            # 5. Prüfen ob bereits lokal vorhanden (Idempotenz)
+            existing_local = item.get("local_path")
+            if existing_local and (WORKSPACE_ROOT / existing_local).exists() and (WORKSPACE_ROOT / existing_local).stat().st_size > 1000:
+                print(f"  [=] Bereits lokal vorhanden: {existing_local}")
+                stats["skipped_existing"] += 1
+                item["download_status"] = "success"
+            elif args.dry_run:
+                print("  [DRY-RUN] Würde heruntergeladen werden.")
+            else:
+                success = False
+                dest_file = target_dir / generate_filename(item, ext=".pdf")
+                try:
+                    # Fall A: Zenodo Record
+                    if "zenodo" in plat.lower() or "zenodo.org" in doi_url:
+                        rec_match = re.search(r'zenodo\.(\d+)', doi_url)
+                        if rec_match:
+                            rec_id = rec_match.group(1)
+                            print(f"  [↓] Lade Zenodo-Record {rec_id} via urllib...")
+                            saved = download_zenodo_record(rec_id, target_dir, item)
+                            if saved:
+                                success = True
+                                item["local_path"] = saved[0]
+                                item["local_path_type"] = Path(saved[0]).suffix.lstrip(".")
+                                stats["success"] += 1
+                                print(f"  [OK] Zenodo gespeichert: {saved[0]}")
+                    elif download_url and download_url.startswith("local://"):
                         print(f"  [-] Lokaler Verweis ({download_url})")
                         item["download_status"] = "skipped_local_reference"
-                        continue
+                    else:
+                        # Fall B: Figshare / Institutional Preprints
+                        if download_url and ("figshare" in download_url or "wgtn.ac.nz" in download_url):
+                            fig_direct = resolve_figshare_pdf(download_url)
+                            if fig_direct:
+                                download_url = fig_direct
 
-                    # Fall B: Figshare / Institutional Preprints
-                    if download_url and ("figshare" in download_url or "wgtn.ac.nz" in download_url):
-                        fig_direct = resolve_figshare_pdf(download_url)
-                        if fig_direct:
-                            download_url = fig_direct
+                        # Direkter Download
+                        if download_url:
+                            print(f"  [↓] Lade Hauptdatei von: {download_url[:65]}...")
+                            if download_stream(download_url, dest_file, timeout=args.timeout):
+                                success = True
+                                rel = dest_file.relative_to(WORKSPACE_ROOT).as_posix()
+                                item["local_path"] = rel
+                                item["local_path_type"] = "pdf"
+                                stats["success"] += 1
+                                print(f"  [OK] Gespeichert: {rel} ({dest_file.stat().st_size / 1024:.1f} KB)")
+                            else:
+                                print("  [!] Direkter Download abgelehnt. Suche andere Open-Access-Fundorte über OpenAlex...")
+                                candidates = resolve_openalex_pdf(doi_url)
+                                for cand in candidates:
+                                    print(f"    Versuche Fallback: {cand[:65]}...")
+                                    if download_stream(cand, dest_file, timeout=args.timeout):
+                                        success = True
+                                        rel = dest_file.relative_to(WORKSPACE_ROOT).as_posix()
+                                        item["local_path"] = rel
+                                        item["local_path_type"] = "pdf"
+                                        stats["success"] += 1
+                                        print(f"    [OK] Fallback erfolgreich: {rel} ({dest_file.stat().st_size / 1024:.1f} KB)")
+                                        break
+                except Exception as e:
+                    print(f"  [!] Fehler beim Download: {e}")
 
-                    # Direkter Download
-                    if download_url:
-                        print(f"  [↓] Lade Hauptdatei von: {download_url[:65]}...")
-                        if download_stream(download_url, dest_file, timeout=args.timeout):
-                            success = True
-                            rel = dest_file.relative_to(WORKSPACE_ROOT).as_posix()
-                            item["local_path"] = rel
-                            item["local_path_type"] = "pdf"
-                            stats["success"] += 1
-                            print(f"  [OK] Gespeichert: {rel} ({dest_file.stat().st_size / 1024:.1f} KB)")
-                        else:
-                            print("  [!] Direkter Download blockiert. Suche OpenAlex-Fallback...")
-                            candidates = resolve_openalex_pdf(doi_url)
-                            for cand in candidates:
-                                print(f"    Versuche Fallback: {cand[:65]}...")
-                                if download_stream(cand, dest_file, timeout=args.timeout):
-                                    success = True
-                                    rel = dest_file.relative_to(WORKSPACE_ROOT).as_posix()
-                                    item["local_path"] = rel
-                                    item["local_path_type"] = "pdf"
-                                    stats["success"] += 1
-                                    print(f"    [OK] Fallback erfolgreich: {rel} ({dest_file.stat().st_size / 1024:.1f} KB)")
-                                    break
-            except Exception as e:
-                print(f"  [!] Fehler beim Download: {e}")
-
-            if success:
-                item["download_status"] = "success"
-                item["download_error"] = None
-                item["download_timestamp"] = datetime.now(timezone.utc).isoformat()
-            else:
-                if not item.get("download_status") == "success":
+                if success:
+                    item["download_status"] = "success"
+                    item["download_error"] = None
+                    item["download_timestamp"] = datetime.now(timezone.utc).isoformat()
+                elif item.get("download_status") not in ("success", "skipped_local_reference"):
                     item["download_status"] = "failed"
-                    item["download_error"] = "Blocked by publisher bot protection or no accessible open full text"
+                    item["download_error"] = ("Abruf vom Server abgelehnt oder kein frei "
+                                              "zugänglicher Volltext gefunden")
                     stats["failed"] += 1
                     print("  [FAIL] Konnte Hauptdokument nicht herunterladen.")
 
-        # 5. Echte Datenanhänge & Begleitmaterialien verarbeiten
+        # 6. Echte Datenanhänge: jeder mit seinen eigenen Prüfblöcken
+        haupt_lokal = item.get("local_path") if status == "nutzen" else None
         for idx, anhang in enumerate(anhaenge):
             a_typ = anhang.get("typ", "supplementary_pdf")
             a_url = anhang.get("url")
             a_format = anhang.get("format", "pdf").lower()
             a_titel = anhang.get("titel_beschreibung", "")
+
+            a_status, a_grund = nutzungsstatus(anhang, anhang_schluessel(anhang), aussortiert)
+            if a_status != "nutzen":
+                key = "skipped_review" if a_status == "warten" else "skipped_gesperrt"
+                print(f"    [-] Anhang '{a_typ}' nicht geladen ({a_grund})")
+                anhang["download_status"] = key
+                anhang["download_error"] = a_grund
+                stats[f"anhang_{key}"] += 1
+                warne_bei_lokaler_kopie(anhang, gesperrt_lokal, label=f"{fid} Anhang {idx + 1}")
+                continue
 
             # Zielordner für Anhang
             if any(k in a_typ for k in ["interview", "transkript", "leitfaden"]):
@@ -469,10 +491,11 @@ def main():
                 or a_url == download_url
             )
             if is_dup_or_included:
-                if item.get("local_path"):
-                    anhang["local_path"] = item.get("local_path")
+                # Verweis auf das Hauptdokument nur, wenn dieses selbst genutzt werden darf
+                if haupt_lokal:
+                    anhang["local_path"] = haupt_lokal
                     anhang["download_status"] = "included_in_main_document"
-                    print(f"    [+] Anhang '{a_typ}': Im Hauptdokument enthalten / verweist auf Hauptdokument ({item.get('local_path')})")
+                    print(f"    [+] Anhang '{a_typ}': Im Hauptdokument enthalten / verweist auf Hauptdokument ({haupt_lokal})")
                 continue
 
             # Bereits lokal vorhanden
@@ -482,6 +505,7 @@ def main():
                 continue
 
             if args.dry_run:
+                print(f"    [DRY-RUN] Anhang '{a_typ}' würde heruntergeladen werden.")
                 continue
 
             # Separater Download echter Begleitdateien
@@ -508,10 +532,21 @@ def main():
     print(f"📎 Anhänge heruntergeladen:     {stats['attachments_downloaded']}")
     print(f"⚠️  Übersprungen (kein OA):      {stats['skipped_no_oa']}")
     print(f"⚠️  Übersprungen (manuell):      {stats['skipped_manual']}")
-    print(f"❌ Nicht abrufbar (Paywall/Bot): {stats['failed']}")
+    print(f"⛔ Gesperrt (K0/Datenschutz):    {stats['skipped_gesperrt']} Quellen, "
+          f"{stats['anhang_skipped_gesperrt']} Anhänge")
+    print(f"⏳ Wartet auf Review:            {stats['skipped_review']} Quellen, "
+          f"{stats['anhang_skipped_review']} Anhänge")
+    print(f"❌ Nicht abrufbar (abgelehnt):   {stats['failed']}")
     print(f"📁 Zielordner:                   {base_dir}")
     print(f"📄 Aktualisierte Findings:       {findings_path}")
     print("=" * 65)
+
+    if gesperrt_lokal:
+        print("\n[!] ACHTUNG: Lokale Kopien von Quellen, die nicht genutzt werden dürfen.")
+        print("    Sie stammen aus einem früheren Lauf. Bitte prüfen und löschen, bei")
+        print("    Datenschutzbefund personenbezogen sofort:")
+        for zeile in gesperrt_lokal:
+            print(f"      - {zeile}")
 
     # Automatische Erstellung des Download- & Zitat-Berichts
     if not args.dry_run and not args.no_report:
